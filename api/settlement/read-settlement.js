@@ -3,6 +3,7 @@ const models = require('../../models');
 const { USER_ROLE } = require('../../middleware/role.middleware');
 const sequelize = require('sequelize');
 const { USER_TYPE } = require('../../util/tokenService');
+const { Sequelize } = require('sequelize');
 const { Op } = sequelize;
 
 module.exports = {
@@ -23,137 +24,101 @@ async function service(_request, _response, next) {
   const startDate = _request.query.startDate || null;
   const endDate = _request.query.endDate || null;
 
-  const where = {
-    [Op.and]: [],
-  };
-
-  if (startDate || endDate) {
-    if (startDate && endDate) {
-      where[Op.and].push({ sales_date: { [Op.between]: [startDate, endDate] } });
-    }
-
-    if (startDate) {
-      where[Op.and].push({ sales_date: { [Op.gte]: startDate } });
-    }
-
-    if (endDate) {
-      where[Op.and].push({ sales_date: { [Op.lte]: endDate } });
-    }
-  }
-
   try {
-    const { count: totalCount, rows: kiccTotalRecords } = await models.kicc_total_record.findAndCountAll({
-      where,
-      offset: (pageNum - 1) * rowPerPage,
-      limit: rowPerPage,
-      order: [['sales_date', orderByQueryParam]],
-      attributes: [
-        'id',
-        'sales_date',
-        'record_type',
-        'total_records',
-        'total_page',
-        'current_page',
-        'transaction_count',
-        'transaction_amount',
-        'cancel_count',
-        'cancel_amount',
-        'total_count',
-        'total_amount',
-        'pg_commission',
-        'extra_commission',
-        'total_commission',
-        'tax_amount',
-        'adjust_amount',
-        'total_kwh',
-        'ignore_kwh',
-        [
-          models.sequelize.literal(`(
-            SELECT COUNT(*) 
-            FROM kicc_transaction_records 
-            WHERE payment_date = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalCountPG',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT COUNT(*) 
-            FROM erp_results_tb 
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalCountERP',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT SUM(sales_amount) 
-            FROM charger_records_tb
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalSalesAmountChargerRecordTb',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT SUM(cancel_amount) 
-            FROM charger_records_tb
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalCancelAmountChargerRecordTb',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT SUM(commission_amount) 
-            FROM charger_records_tb
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalCommissionAmountChargerRecordTb',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT SUM(deposit_amount) 
-            FROM charger_records_tb
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'totalDepositAmountChargerRecordTb',
-        ],
-        [
-          models.sequelize.literal(`(
-            SELECT SUM(COALESCE(charger_records_tb.sales_amount, 0) + COALESCE(charger_records_tb.cancel_amount, 0) - COALESCE(charger_records_tb.commission_amount, 0)) 
-            FROM charger_records_tb
-            WHERE data_day = DATE_FORMAT(kicc_total_record.sales_date, '%Y%m%d') 
-          )`),
-          'sum_sales_amount_cancel_amount_commission_amount',
-        ],
-        // [
-        //   models.sequelize.literal(
-        //     `(SELECT SUM(cl_kwh) FROM sb_charging_logs WHERE createdAt = ${models.sequelize.fn('from_unixtime', models.squelize.col('timestampField'))`
-        //   ),
-        //   'totalChargingLogs',
-        // ],
-      ],
-    });
 
-    const result = [];
-
-    for (let kicc of kiccTotalRecords) {
-      const salesDate = parseSalesDate(kicc.dataValues.sales_date.toString());
-      if (kicc.dataValues.total_kwh) kicc.dataValues.total_kwh = formatKwh(kicc.dataValues.total_kwh) || 0;
-      else kicc.dataValues.total_kwh = 0;
-
-      if (kicc.dataValues.ignore_kwh) kicc.dataValues.ignore_kwh = formatKwh(kicc.dataValues.ignore_kwh) || 0;
-      else kicc.dataValues.ignore_kwh = 0;
-
-      kicc.dataValues.total_kwh_minus_ignore_kwh = kicc.dataValues.total_kwh - kicc.dataValues.ignore_kwh;
-
-      const item = {
-        ...kicc.dataValues,
-        salesDate,
-      };
-      result.push(item);
+    let where = '';
+    if (startDate){
+      where = " where DATE_FORMAT(data_day, '%Y%m%d') > '"+startDate+"'";
     }
+
+    if (endDate){
+      if (!where){
+        where = " where DATE_FORMAT(data_day, '%Y%m%d') < '"+endDate+"'";
+      }
+      else{
+        where += " AND DATE_FORMAT(data_day, '%Y%m%d') < '"+endDate+"'";
+      }
+    }
+
+    let queryString =
+      `select A.*, B.transaction_count, B.cancel_count, C.totalCountERP
+    from
+    (
+      select  
+      DATE_FORMAT(data_day, '%Y%m%d') AS data_day, 
+      SUM(sales_amount) AS sales_amount, 
+      SUM(dayignore_amount) AS dayignore_amount, 
+      SUM(commission_amount) AS commission_amount, 
+      SUM(cancel_amount) AS cancel_amount,
+      SUM(daycharge_amount) AS daycharge_amount
+      from charger_records_tb 
+      ${where}
+      group by DATE_FORMAT(data_day, '%Y%m%d')
+    ) AS A
+    left join 
+    (
+      select DATE_FORMAT(sales_date, '%Y%m%d') AS data_day, SUM(transaction_count) as transaction_count, SUM(cancel_count) as cancel_count
+      from kicc_total_records
+      group by DATE_FORMAT(sales_date, '%Y%m%d')
+    ) as B
+    on A.data_day = B.data_day
+    left join
+    (
+      select DATE_FORMAT(data_day, '%Y%m%d') AS data_day, COUNT(data_day) as totalCountERP
+      from erp_requests_tb
+      where req_type = "C"
+      group by DATE_FORMAT(data_day, '%Y%m%d')
+    ) as C
+    on A.data_day = C.data_day
+    `;
+
+    const settlementData = await models.sequelize.query(
+      queryString,
+      {
+        type: Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const totalCount = settlementData.length;
+
+    var payments = [];
+
+    for(let data of settlementData){
+      const sales_date = data.data_day;
+      const totalSalesAmountChargerRecordTb = data.sales_amount || 0;
+      const totalCancelAmountChargerRecordTb = data.cancel_amount || 0;
+      const totalCommissionAmountChargerRecordTb = data.commission_amount || 0;
+      const sum_sales_amount_cancel_amount_commission_amount = parseInt(totalSalesAmountChargerRecordTb) + parseInt(totalCancelAmountChargerRecordTb) - parseInt(totalCommissionAmountChargerRecordTb);
+      const ignore_kwh = formatKwh(data.dayignore_amount) || 0;
+      const total_kwh = formatKwh(data.daycharge_amount) || 0;
+      const transaction_count = data.transaction_count || 0;
+      const cancel_count = data.cancel_count || 0;
+      const totalCountPG = parseInt(transaction_count) + parseInt(cancel_count);
+      const totalCountERP = data.totalCountERP || 0;
+      const total_kwh_minus_ignore_kwh = total_kwh - ignore_kwh;
+
+      payments.push({
+        sales_date: sales_date,
+        salesDate: parseSalesDate(sales_date),
+        totalSalesAmountChargerRecordTb: totalSalesAmountChargerRecordTb,
+        totalCancelAmountChargerRecordTb: totalCancelAmountChargerRecordTb,
+        totalCommissionAmountChargerRecordTb: totalCommissionAmountChargerRecordTb,
+        sum_sales_amount_cancel_amount_commission_amount: sum_sales_amount_cancel_amount_commission_amount,
+        ignore_kwh: ignore_kwh,
+        total_kwh_minus_ignore_kwh: total_kwh_minus_ignore_kwh,
+        total_kwh: total_kwh,
+        transaction_count: transaction_count,
+        cancel_count: cancel_count,
+        totalCountPG: totalCountPG,
+        totalCountERP: totalCountERP,
+      });
+    }
+
+    payments.sort((a, b) => (a.sales_date < b.sales_date) ? 1 : ((b.sales_date < a.sales_date) ? -1 : 0));
 
     _response.json({
-      totalCount,
-      result,
+      totalCount: totalCount,
+      result: payments,
     });
   } catch (e) {
     next(e);
@@ -178,7 +143,6 @@ function parseSalesDate(sale_date) {
 
   return `${year}-${month}-${day}`;
 }
-
 function formatKwh(num) {
   if (!num) {
     return '';

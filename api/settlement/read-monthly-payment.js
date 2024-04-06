@@ -78,7 +78,7 @@ async function service(_request, _response, next) {
       const cancel_amount = data.cancel_amount || 0;
       const commission_amount = data.commission_amount || 0;
       const total_payment = parseInt(sales_amount) + parseInt(cancel_amount) - parseInt(commission_amount);
-      const sum_dayignore_amount = data.dayignore_amount || 0;
+      const sum_dayignore_amount = formatKwh(data.dayignore_amount) || 0;
       delete data.sumTRAMT;
       delete data.mon;
 
@@ -125,4 +125,10 @@ function parseMonth2(sale_date) {
   const month = sale_date.slice(5, 7);
 
   return `${year}${month}`;
+}
+function formatKwh(num) {
+  if (!num) {
+    return '';
+  }
+  return parseFloat(num / 1000).toFixed(2);
 }

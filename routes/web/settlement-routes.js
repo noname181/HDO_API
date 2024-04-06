@@ -1,7 +1,8 @@
 const router = require('express').Router();
-const readSettlement  = require('../../api/settlement/read-settlement'); 
-const readSettlementDetail  = require('../../api/settlement/read-settlement-detail');
-const erpResendSettlementDetail  = require('../../api/settlement/erp-resend-settlement-detail-by-id');
+const readSettlement = require('../../api/settlement/read-settlement');
+const readSettlementForPopup = require('../../api/settlement/read-settlement-for-popup');
+const readSettlementDetail = require('../../api/settlement/read-settlement-detail');
+const erpResendSettlementDetail = require('../../api/settlement/erp-resend-settlement-detail-by-id');
 const { configuration } = require('../../config/config');
 const { TokenService } = require('../../util/tokenService');
 const { AuthMiddleware } = require('../../middleware/auth.middleware');
@@ -27,23 +28,45 @@ router.get(
 );
 
 router.get(
+  readSettlementForPopup.path,
+  authMiddleware.checkToken(readSettlementForPopup.checkToken),
+  userActionLogMiddleware(false),
+  newRoleMiddleware.checkRoles(
+    readSettlementForPopup.roles,
+    readSettlementForPopup.permissions,
+    readSettlementForPopup.checkToken
+  ),
+  readSettlementForPopup.validator,
+  readSettlementForPopup.service,
+  readSettlementForPopup.errorHandler
+);
+
+router.get(
   readSettlementDetail.path,
   authMiddleware.checkToken(readSettlementDetail.checkToken),
   userActionLogMiddleware(false),
-  newRoleMiddleware.checkRoles(readSettlementDetail.roles, readSettlementDetail.permissions, readSettlementDetail.checkToken),
+  newRoleMiddleware.checkRoles(
+    readSettlementDetail.roles,
+    readSettlementDetail.permissions,
+    readSettlementDetail.checkToken
+  ),
   readSettlementDetail.validator,
   readSettlementDetail.service,
   readSettlementDetail.errorHandler
 );
 
 router.post(
-    erpResendSettlementDetail.path,
-    authMiddleware.checkToken(erpResendSettlementDetail.checkToken),
-    userActionLogMiddleware(false),
-    newRoleMiddleware.checkRoles(erpResendSettlementDetail.roles, erpResendSettlementDetail.permissions, erpResendSettlementDetail.checkToken),
-    erpResendSettlementDetail.validator,
-    erpResendSettlementDetail.service,
-    erpResendSettlementDetail.errorHandler
+  erpResendSettlementDetail.path,
+  authMiddleware.checkToken(erpResendSettlementDetail.checkToken),
+  userActionLogMiddleware(false),
+  newRoleMiddleware.checkRoles(
+    erpResendSettlementDetail.roles,
+    erpResendSettlementDetail.permissions,
+    erpResendSettlementDetail.checkToken
+  ),
+  erpResendSettlementDetail.validator,
+  erpResendSettlementDetail.service,
+  erpResendSettlementDetail.errorHandler
 );
 
 module.exports = router;

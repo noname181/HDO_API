@@ -35,11 +35,11 @@ async function service(_request, _response, next) {
         where += ' C.chgs_station_id like "%' + searchVal + '%" ';
         break;
       case 'chgs_name':
-        where += ' C.chgs_name like "%' + searchVal + '%" ';
+        where += ' A.station_name like "%' + searchVal + '%" ';
         break;
       default:
         if (searchVal) {
-          where += ' C.chgs_station_id like "%' + searchVal + '%" OR C.chgs_name like "%' + searchVal + '%" ';
+          where += ' C.chgs_station_id like "%' + searchVal + '%" OR A.station_name like "%' + searchVal + '%" ';
         }
         break;
     }
@@ -107,6 +107,7 @@ async function service(_request, _response, next) {
     let sumTRAMT = 0;
 
     for (let data of monthlypaymentData) {
+      data.dayignore_amount = formatKwh(data.dayignore_amount);
       const data_day = parseMonth(data.mon);
       const TRAMT = data.sumTRAMT || 0;
       const sales_amount = data.sales_amount || 0;
@@ -124,7 +125,7 @@ async function service(_request, _response, next) {
       };
       result2.push(item);
 
-      sum_dayignore_amount += data.dayignore_amount;
+      sum_dayignore_amount += Number(data.dayignore_amount);
       sum_total_payment += total_payment;
       sumTRAMT += parseInt(TRAMT);
     }
@@ -169,7 +170,7 @@ function parseMonth(sale_date) {
 }
 function formatKwh(num){
   if(!num){
-    return '';
+    return 0;
   }
   return parseFloat(num/1000).toFixed(2);
 }

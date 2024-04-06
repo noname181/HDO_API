@@ -6,6 +6,12 @@ module.exports = (sequelize, DataTypes) => {
   class erp_requests_tb extends Model {
     static associate(models) {
       // Add associations if needed
+      models.erp_requests_tb.belongsTo(models.Org, {
+        as: 'org',
+        foreignKey: 'erp_id',
+        targetKey: 'erp',
+        constraints: false,
+      });
     }
   }
 

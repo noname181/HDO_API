@@ -190,6 +190,23 @@ export const phoneNoMask = (phoneNo: string) => {
   return formattedNumber;
 };
 
+export const formatPhoneNo = (phoneNo: string) => {
+  if (!phoneNo) {
+    return '';
+  }
+
+  switch (phoneNo.length) {
+    case 9:
+      return `${phoneNo.substring(0, 2)}-${phoneNo.substring(2, 5)}-${phoneNo.substring(5, 9)}`;
+    case 10:
+      return `${phoneNo.substring(0, 3)}-${phoneNo.substring(3, 6)}-${phoneNo.substring(6, 10)}`;
+    case 11:
+      return `${phoneNo.substring(0, 3)}-${phoneNo.substring(3, 7)}-${phoneNo.substring(7, 11)}`;
+    default:
+      return phoneNo;
+  }
+};
+
 export const showPhoneNo = (phoneNo: string) => {
   if (!phoneNo) {
     return '';

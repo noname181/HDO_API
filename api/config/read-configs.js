@@ -12,7 +12,7 @@ const Op = sequelize.Op;
 module.exports = {
   path: ['/config'],
   method: 'get',
-  checkToken: true, // default true
+  checkToken: false, // default true
   roles: [USER_TYPE.EXTERNAL, USER_TYPE.HDO, USER_TYPE.MOBILE],
   logDisable: false,
   permissions: [],

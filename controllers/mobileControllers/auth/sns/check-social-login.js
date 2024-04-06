@@ -5,7 +5,6 @@ const models = require('../../../../models');
 const axios = require('axios');
 const { configuration } = require('../../../../config/config');
 const { IAuthUser, TokenService, USER_TYPE } = require('../../../../util/tokenService');
-const { getAppleProfile } = require('./social-login');
 const { BadRequestException } = require('../../../../exceptions/badRequest.exception');
 
 module.exports = {
@@ -52,8 +51,6 @@ async function service(_request, _response, next) {
 
   if (provider === 'APPLE') {
     try {
-      const data = await getAppleProfile(token);
-
       const existUser = await models.UsersNew.findOne({
         where: {
           [Op.and]: [
@@ -63,30 +60,28 @@ async function service(_request, _response, next) {
             {
               status: USER_STATUS.active,
             },
+            {
+              '$userOauths.oAuthId$': token,
+            },
+            {
+              '$userOauths.provider$': provider,
+            },
           ],
         },
         include: [
           {
             model: models.UserOauth,
-            where: {
-              [Op.and]: [
-                {
-                  oAuthId: data['sub'],
-                },
-                {
-                  provider: provider,
-                },
-              ],
-            },
+            as: 'userOauths',
           },
         ],
+        subQuery: false,
       });
 
       if (!existUser) {
         const oAuthCreateInput = {
-          oAuthId: data['sub'],
+          oAuthId: token,
           provider: 'APPLE',
-          email: data.email || getUser.email,
+          email: getUser.email,
           profileImage: null,
           usersNewId: getUser.id,
           accountId: getUser.accountId,

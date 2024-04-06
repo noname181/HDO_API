@@ -5,8 +5,11 @@
  */
 
 const axios = require('axios');
-const MAX_RETRIES = 5; // 최대 재시도 횟수
-const RETRY_DELAY = 1000; // 재시도 사이의 지연 시간 (밀리초)
+const MAX_RETRIES = 10; // 최대 재시도 횟수
+// const RETRY_DELAY = 1000; // 재시도 사이의 지연 시간 (밀리초)
+const RETRY_DELAY_MIN = 1000; // 최소 재시도 사이의 지연 시간 (밀리초)
+const RETRY_DELAY_MAX = 1500; // 최대 재시도 사이의 지연 시간 (밀리초)
+const RETRY_DELAY = Math.random() * (RETRY_DELAY_MAX - RETRY_DELAY_MIN) + RETRY_DELAY_MIN;
 const serviceKey = process.env.ME_API_SERVICE_KEY;
 
 const apiUrl = 'http://apis.data.go.kr/B552584/EvCharger/getChargerInfo';

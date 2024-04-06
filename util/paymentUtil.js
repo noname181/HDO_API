@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const cryptor = require('./cryptor');
 const { getKoreanDate } = require('./common-util');
 
-async function payRequestFromKICC(totalPrice, kBillingKey, mallId = process.env.EASYPAY_MALL_ID, isRetry = false) {
+async function payRequestFromKICC(totalPrice, kBillingKey, mallId = process.env.EASYPAY_MALL_ID, isRetry = false, clId = null) {
   try {
     const transactionID = 'refund-' + createTransactionID(getKoreanDate());
     const shopOrderNo = 'order-' + transactionID;
@@ -27,6 +27,9 @@ async function payRequestFromKICC(totalPrice, kBillingKey, mallId = process.env.
     if (isRetry) {
       data["shopValueInfo"] = {
         value1 : "Y"
+      }
+      if (clId) {
+        data["shopValueInfo"]["value2"] = clId?.toString()
       }
     }
     console.log('결제요청 data', data);

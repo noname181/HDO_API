@@ -9,6 +9,7 @@ const { Op, HasMany, QueryTypes, BelongsToMany } = require('sequelize');
 const _ = require('lodash');
 const moment = require('moment');
 // const { USER_TYPE } = require('../../util/tokenService');
+const sequelize = require('sequelize');
 
 module.exports = {
   path: '/charging-stations-manage/:chgs_id',
@@ -54,6 +55,7 @@ async function service(_request, _response, next) {
         },
         attributes: [ 
           'id',
+          'stat',
           'statNm',
           'statId',
           'chgerType',
@@ -69,6 +71,11 @@ async function service(_request, _response, next) {
           'limitDetail',
           'note', 
           'coordinate',
+          'output3',
+          'output7',
+          'output50',
+          'output100', 
+          'output200',
            [ 
               models.sequelize.literal(`
               (( 6371 * acos( cos( radians(${userLocation.latitude}) ) * cos( radians( EnvChargeStation.lat ) ) * cos( radians( EnvChargeStation.lng ) - radians(${userLocation.longitude}) ) + sin( radians(${userLocation.latitude}) ) * sin( radians( EnvChargeStation.lat ) ) ) ) * 1000)  
@@ -93,8 +100,25 @@ async function service(_request, _response, next) {
 
       // 결과 매핑
       const station = stationDb.get({ plain: true });
-      const stationStatus = station.envChargers.find((item) => Number(item.stat) === 2) ? 'ACTIVE' : 'INACTIVE';
-      maxKw = Math.max(...station.envChargers.flatMap((item) => item.output));
+      //const stationStatus = station.envChargers.find((item) => Number(item.stat) === 2) ? 'ACTIVE' : 'INACTIVE';
+      // maxKw = Math.max(...station.envChargers.flatMap((item) => item.output));
+      const stationStatus = station.stat === 2 ? 'ACTIVE' : 'INACTIVE';
+      if(station.output200){
+        maxKw = 200;
+      } else if(station.output100){
+        maxKw = 100;
+      } else if(station.output50){
+        maxKw = 50;
+      } else if(station.output7){
+        maxKw = 7;
+      }  else if(station.output3){
+        maxKw = 3;
+      }
+      console.log('station.output200', station.output200)
+      console.log('station.output100', station.output100)
+      console.log('station.output50', station.output50)
+      console.log('station.output7', station.output7)
+      console.log('station.output3', station.output3)
       envChargerId = station.id;
       chargingStation = {
         chgs_id: station.statId,
@@ -116,10 +140,11 @@ async function service(_request, _response, next) {
         chargers: station.envChargers.map((item) => ({
           id: item.id,
           chgsName: item.statNm,
-          connectorType: item.chgerType,
+          speedType: checkSpeedType(item.output),
+          connectorType: checkConnectorType(item.chgerType),
           address: item.addr,
           maxKw: item.output,
-          method: item.method,
+          method: item.method || 'N/A',
           isParkingFree: item.parkingFree,
           isLimite: item.limitYn,
           busiId: item.busiId,
@@ -159,9 +184,20 @@ async function service(_request, _response, next) {
                 model: models.ChargerModel,
                 as: 'chargerModel',
                 required: false,
-                attributes: {
-                  exclude: ['deletedAt', 'createdWho', 'updatedWho'],
-                },
+                attributes: 
+                  ['id', 'modelCode', 'manufacturerId', 'modelName', 'maxKw',  [
+                    models.sequelize.literal(
+                      '(SELECT descInfo FROM CodeLookUps WHERE divCode = "SPEED_TYPE" AND descVal = speedType LIMIT 1)'
+                    ),
+                    'speedType',
+                  ],
+                  [
+                    models.sequelize.literal(
+                      '(SELECT descInfo FROM CodeLookUps WHERE divCode = "CON_TYPE" AND descVal = connectorType LIMIT 1)'
+                    ),
+                    'connectorType',
+                  ], 'channelCount', 'lastFirmwareVer', 'pncAvailable', 'useYN', 'createdAt', 'updatedAt'],
+                  //exclude: ['deletedAt', 'createdWho', 'updatedWho'],
               },
               {
                 model: models.UnitPriceSet,
@@ -393,4 +429,34 @@ function errorHandler(_error, _request, _response, next) {
 
   _response.error.unknown(_error.toString());
   next(_error);
+}
+
+function checkSpeedType(val){
+  if(val == 3 || val == 7){
+    return '완속';
+  } else if(val == 50){
+    return '50kW';
+  } else if(val == 100){
+    return '100kW';
+  } else if(val == 200){
+    return '200kW';
+  }
+  return '';
+}
+
+function checkConnectorType(val){
+  let arrConnectorType = [];
+  if(val == 2){
+    arrConnectorType.push('완속');
+  } 
+  if([4,5,6].includes(val)){
+    arrConnectorType.push('DC콤보'); 
+  } 
+  if([1,3,5,6].includes(val)){ 
+    arrConnectorType.push('차데모'); 
+  } 
+  if([7,3,6].includes(val)){
+    arrConnectorType.push('AC3상');  
+  }
+  return arrConnectorType.map(String).join("+");
 }

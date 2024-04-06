@@ -38,7 +38,7 @@ async function service(_request, _response, next) {
     const calcTotal = await models.sb_charging_log.findOne({
       where,
       attributes: [
-        [models.sequelize.fn('SUM', models.sequelize.literal('appliedUnitPrice * cl_kwh * 0.001')), 'totalPrice'],
+        [models.sequelize.fn('SUM', models.sequelize.literal('chargeFee')), 'totalPrice'],
         [models.sequelize.fn('SUM', models.sequelize.literal('cl_kwh * 0.001')), 'totalKwh'],
       ],
     });

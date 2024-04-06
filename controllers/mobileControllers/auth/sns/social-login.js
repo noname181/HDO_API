@@ -304,8 +304,6 @@ async function service(_request, _response, next) {
 
   try {
     if (provider === 'APPLE') {
-      const data = await getAppleProfile(token);
-
       const existUser = await models.UsersNew.findOne({
         where: {
           [Op.and]: [
@@ -315,23 +313,21 @@ async function service(_request, _response, next) {
             {
               status: USER_STATUS.active,
             },
+            {
+              '$userOauths.oAuthId$': token,
+            },
+            {
+              '$userOauths.provider$': provider,
+            },
           ],
         },
         include: [
           {
             model: models.UserOauth,
-            where: {
-              [Op.and]: [
-                {
-                  oAuthId: data['sub'],
-                },
-                {
-                  provider: provider,
-                },
-              ],
-            },
+            as: 'userOauths',
           },
         ],
+        subQuery: false,
       });
 
       if (!existUser) {
@@ -352,6 +348,7 @@ async function service(_request, _response, next) {
       });
     }
   } catch (error) {
+    console.log('error::', error);
     throw new BadRequestException('연동된 회원정보가 없습니다.', 'APPLE_ERROR');
   }
 }
@@ -493,18 +490,4 @@ async function GetProfileNaver(token) {
   return res;
 }
 
-const getAppleProfile = (token) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const data = decode(token);
-      if (!data || !data['sub']) {
-        reject(new Error('INVALID_TOKEN'));
-      }
-      resolve(data);
-    } catch (error) {
-      reject(new Error('INVALID_TOKEN'));
-    }
-  });
-};
-
-module.exports = { socialLogin, getAppleProfile };
+module.exports = { socialLogin };

@@ -75,103 +75,89 @@ async function service(_request, _response, next) {
         `
         SELECT  
         * 
-      FROM 
+        FROM 
         (
-          SELECT 
-            AAA.* 
+          SELECT  
+            BBB.*
           FROM 
-            (
-              SELECT  
-                EnvStations.id AS chgs_id,
-                EnvStations.statId,
-                EnvStations.statId AS favId,
-                EnvStations.statNm AS chgs_name, 
-                EnvStations.coordinate,  
-                EnvStations.lat, 
-                EnvStations.lng, 
-                EnvStations.addr AS address,
-                'other' AS company,
-                ST_DISTANCE_SPHERE(
-                  POINT(
-                    ${userLocation.longitude}, ${userLocation.latitude}
-                  ), 
-                  POINT(lng, lat)
-                ) AS distance 
+              (
+              SELECT 
+                  chgs_id,  
+                  NULL AS statId,
+                  CONVERT(chgs_id, CHAR) AS favId,
+                  chgs_name, 
+                  coordinate,  
+                  ST_Y(coordinate) AS lat, 
+                  ST_X(coordinate) AS lng, 
+                  (
+                  SELECT 
+                      address 
+                  FROM 
+                      Orgs 
+                  WHERE 
+                      sb_charging_stations.orgId = Orgs.id 
+                      AND Orgs.deletedAt IS NULL 
+                  LIMIT 
+                      1
+                  ) AS address,
+                  'hdo' AS company,
+                  ST_DISTANCE_SPHERE(
+                    POINT(
+                      ${userLocation.longitude}, ${userLocation.latitude}
+                    ), 
+                    POINT(ST_X(coordinate), ST_Y(coordinate)) 
+                  ) AS distance 
               FROM 
-                EnvChargeStations AS EnvStations   
-                
-             ${whereENVQuery
-                ? 
-                 `WHERE 1 = 1 ` + whereENVQuery
-
-                : 
-                `` 
-             } 
-             ORDER BY
-               ${name ? ` chgs_name ` : ` address `}
-            ) AS AAA  
+                  sb_charging_stations 
+              WHERE 
+                  deletedAt IS NULL 
+                  AND coordinate IS NOT NULL 
+                  AND STATUS = 'ACTIVE' 
+                  ${whereHDOQuery} 
+              ORDER BY
+                 distance
+              ) AS BBB 
 
             UNION 
-
-        SELECT  
-            BBB.*
-        FROM 
-            (
+            
             SELECT 
-                chgs_id,  
-                NULL AS statId,
-                CONVERT(chgs_id, CHAR) AS favId,
-                chgs_name, 
-                coordinate,  
-                ST_Y(coordinate) AS lat, 
-                ST_X(coordinate) AS lng, 
-                (
-                SELECT 
-                    address 
-                FROM 
-                    Orgs 
-                WHERE 
-                    sb_charging_stations.orgId = Orgs.id 
-                    AND Orgs.deletedAt IS NULL 
-                LIMIT 
-                    1
-                ) AS address,
-                'hdo' AS company,
-                ST_DISTANCE_SPHERE(
-                  POINT(
-                    ${userLocation.longitude}, ${userLocation.latitude}
-                  ), 
-                  POINT(ST_X(coordinate), ST_Y(coordinate)) 
-                ) AS distance 
+              AAA.* 
             FROM 
-                sb_charging_stations 
-            WHERE 
-                deletedAt IS NULL 
-                AND coordinate IS NOT NULL 
-                AND STATUS = 'ACTIVE' 
-                ${whereHDOQuery} 
-            ORDER BY
-            ${name 
-                ? 
-                ` chgs_name ` 
-                : 
-                ` (
-                SELECT 
-                    address 
+              (
+                SELECT  
+                  EnvStations.id AS chgs_id,
+                  EnvStations.statId,
+                  EnvStations.statId AS favId,
+                  EnvStations.statNm AS chgs_name, 
+                  EnvStations.coordinate,  
+                  EnvStations.lat, 
+                  EnvStations.lng, 
+                  EnvStations.addr AS address,
+                  'other' AS company,
+                  ST_DISTANCE_SPHERE(
+                    POINT(
+                      ${userLocation.longitude}, ${userLocation.latitude}
+                    ), 
+                    POINT(lng, lat)
+                  ) AS distance 
                 FROM 
-                    Orgs 
-                WHERE 
-                    sb_charging_stations.orgId = Orgs.id 
-                    AND Orgs.deletedAt IS NULL 
-                LIMIT 
-                    1
-                ) `}
-            ) AS BBB 
-        ) AS CCC  
-       ORDER BY
-        ${name ? ` chgs_name ` : ` address `}
-       LIMIT 
-        ${start},${limit}
+                  EnvChargeStations AS EnvStations   
+                  
+              ${whereENVQuery
+                  ? 
+                  `WHERE 1 = 1 ` + whereENVQuery
+
+                  : 
+                  `` 
+              } 
+              ORDER BY
+                 distance
+              ) AS AAA   
+          ) AS CCC   
+        ORDER BY 
+          company, distance 
+        LIMIT 
+          ${start},${limit}
     `,
     {
         type: sequelize.QueryTypes.SELECT,

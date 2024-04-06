@@ -116,7 +116,8 @@ function service(request, response, next) {
                     //PERMISSION_NAME.chargerErrorHistory,
                     //PERMISSION_NAME.chargerDiagnostic,
                     //PERMISSION_NAME.cloudwatchLog,
-                    permission_constraints_1.PERMISSION_NAME.chargingLog
+                    permission_constraints_1.PERMISSION_NAME.chargingLog,
+                    permission_constraints_1.PERMISSION_NAME.paymentLog,
                 ],
             },
             dashBoard: {

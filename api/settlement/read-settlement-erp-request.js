@@ -5,7 +5,7 @@ const { USER_TYPE } = require('../../util/tokenService');
 const { Op } = sequelize;
 
 module.exports = {
-  path: ['/settlement-erp-request/:date'],
+  path: ['/settlement-erp-request/'],
   method: 'get',
   checkToken: true, // default true
   roles: [USER_TYPE.EXTERNAL, USER_TYPE.HDO, USER_TYPE.MOBILE],
@@ -15,7 +15,8 @@ module.exports = {
 };
 
 async function service(_request, _response, next) {
-  const date = _request.params.date || null;
+  const date = _request.query.date || null;
+  const req_type = _request.query.req_type || null;
   const orderByQueryParam = (_request.query.odby ? _request.query.odby : 'DESC').toUpperCase();
 
   const where = {
@@ -26,8 +27,26 @@ async function service(_request, _response, next) {
     where[Op.and].push({ data_day: date.replace(/-|\//g, '') });
   }
 
+  if (req_type) {
+    where[Op.and].push({ req_type: req_type });
+  }
+
   let options = {
     where: where,
+    include: [
+      {
+        model: models.Org,
+        as: 'org',
+        attributes: ['id'],
+        include: [
+          {
+            model: models.sb_charging_station,
+            as: 'chargingStation',
+            attributes: ['chgs_name', 'chgs_station_id'],
+          },
+        ],
+      },
+    ],
     order: [['id', orderByQueryParam]],
   };
 

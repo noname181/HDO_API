@@ -21,8 +21,24 @@ async function service(request, response, next) {
   const personId = params.id.toString().trim() || '';
 
   const person = await models.SAP_Person.findByPk(personId, {
-    attributes: { exclude: ['PASSWORD', 'deletedAt'] },
-  });
+    attributes: { 
+      include: [
+          [models.sequelize.fn('TRIM', models.sequelize.col('DPT')), 'DPT'],
+          [models.sequelize.fn('TRIM', models.sequelize.col('DPT1')), 'DPT1'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('EMAIL')), 'EMAIL'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('ENAME')), 'ENAME'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('JKG')), 'JKG'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('JKG1')), 'JKG1'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('JKW')), 'JKW'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('JKW1')), 'JKW1'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('ORG')), 'ORG'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('ORG1')), 'ORG1'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('PERNR')), 'PERNR'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('PHONE')), 'PHONE'], 
+          [models.sequelize.fn('TRIM', models.sequelize.col('PHONE2')), 'PHONE2'],  
+      ],
+      exclude: ['PASSWORD', 'deletedAt'] },
+    });
 
   if (!person) {
     return next('PERSON_IS_NOT_FOUND');

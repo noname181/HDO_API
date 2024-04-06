@@ -51,7 +51,8 @@ module.exports = (sequelize, DataTypes) => {
         constraints: false,
       });
       models.UsersNew.hasMany(models.AllLogs, {
-        as: 'users',
+        as: 'allLogs',
+        foreignKey: 'userId',
         constraints: false,
       });
     }

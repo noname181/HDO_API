@@ -57,6 +57,7 @@ var PERMISSION_NAME;
     PERMISSION_NAME["csDashboard"] = "CS \uB300\uC2DC\uBCF4\uB4DC";
     PERMISSION_NAME["statistics"] = "\uD1B5\uACC4";
     PERMISSION_NAME["chargingLog"] = "\uCDA9\uC804\uB85C\uADF8";
+    PERMISSION_NAME["paymentLog"] = "\uACB0\uC81C\uB85C\uADF8";
 })(PERMISSION_NAME || (exports.PERMISSION_NAME = PERMISSION_NAME = {}));
 var PERMISSION_PAGE;
 (function (PERMISSION_PAGE) {
@@ -114,4 +115,5 @@ var PERMISSION_PAGE;
     PERMISSION_PAGE["csDashboard"] = "/cs-dashboard";
     PERMISSION_PAGE["statistics"] = "/statistics";
     PERMISSION_PAGE["chargingLog"] = "/charging-log";
+    PERMISSION_PAGE["paymentLog"] = "/payment-log";
 })(PERMISSION_PAGE || (exports.PERMISSION_PAGE = PERMISSION_PAGE = {}));

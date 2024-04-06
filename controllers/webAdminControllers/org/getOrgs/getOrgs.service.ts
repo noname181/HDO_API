@@ -2,8 +2,13 @@ import { NextFunction, Request, Response } from 'express';
 import { USER_TYPE } from '../../../../util/tokenService';
 import { HTTP_STATUS_CODE } from '../../../../middleware/newRole.middleware';
 import { Op } from 'sequelize';
-import isDate from 'validator/lib/isDate';
-import { addressMask, emailMask, nameMask, phoneNoMask } from '../../user/transformAdminUser/transformAdminUser';
+import {
+  addressMask,
+  emailMask,
+  nameMask,
+  phoneNoMask,
+  formatPhoneNo,
+} from '../../user/transformAdminUser/transformAdminUser';
 const models = require('../../../../models');
 
 enum ORG_CATE {
@@ -248,14 +253,21 @@ const getOrgsDBQuery = (query: GetOrgsQuery, orgId = 0, orgType = '') => {
     return dbQuery;
   }
 
+  const searchValue = query.searchVal.replace(/-/g, '');
   if (query.searchKey) {
     const searchKeyQuery = searchKeyTransformer(query.searchKey, allowSearchKey);
-    dbQuery.push({ [searchKeyQuery]: { [Op.like]: `%${query.searchVal}%` } });
+    dbQuery.push(
+      models.sequelize.where(
+        models.sequelize.fn('REPLACE', models.sequelize.col(searchKeyQuery), '-', ''),
+        'LIKE',
+        `%${searchValue}%`
+      )
+    );
 
     return dbQuery;
   }
 
-  const searchKeyQuery = searchValQueryBuilder(query.searchVal, allowSearchKey);
+  const searchKeyQuery = searchValQueryBuilder(searchValue, allowSearchKey);
   dbQuery.push({ [Op.or]: searchKeyQuery });
 
   return dbQuery;
@@ -288,5 +300,11 @@ const searchKeyTransformer = (searchKey: string, allowSearchKey: string[]): stri
 };
 
 const searchValQueryBuilder = (searchVal: string, allowSearchKey: string[]) => {
-  return allowSearchKey.map((item) => ({ [item]: { [Op.like]: `%${searchVal}%` } }));
+  return allowSearchKey.map((item) => {
+    return models.sequelize.where(
+      models.sequelize.fn('REPLACE', models.sequelize.col(`Org.${item}`), '-', ''),
+      'LIKE',
+      `%${searchVal}%`
+    );
+  });
 };

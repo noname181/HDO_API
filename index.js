@@ -65,6 +65,7 @@ const apiRouterRegister = require('./middleware/router-register')('./api', '.js'
 const router = require('./routes');
 const winston = require('winston');
 const winstonMysql = require('winston-mysql');
+require('dotenv').config();
 const options_default = {
     host: process_1.default.env.SQL_HOST || 'localhost',
     user: process_1.default.env.SQL_USER || 'hdo-dev',
@@ -170,10 +171,25 @@ function bootstrap() {
                     console.log(`미충전 결제건 자동취소 스케줄러가 실행되었습니다. ${resultCnt}건 자동취소 완료`);
                 });
             });
-            schedule.scheduleJob('10,40 * * * *', function () {
+            schedule.scheduleJob('22,52 * * * *', function () {
                 return __awaiter(this, void 0, void 0, function* () {
                     console.log('스케줄러가 API를 호출합니다.');
-                    yield getStationDataAndModifyNew();
+                    yield sleep(Math.random() * 19900 + 100);
+                    const batchRecord = yield models.BatchRecord.findByPk(1);
+                    // 25min trick
+                    const currentTime = new Date();
+                    const twentyFiveMinutesAgo = new Date(currentTime.getTime() - 25 * 60 * 1000);
+                    if (new Date(batchRecord.env_chargers_stations_exec_at) < twentyFiveMinutesAgo) {
+                        batchRecord.env_chargers_stations_exec_at = currentTime;
+                        batchRecord.env_chargers_stations_exec_cnt += 1;
+                        // 모델 업데이트
+                        yield batchRecord.save();
+                        // 추가 작업 실행
+                        yield getStationDataAndModifyNew();
+                    }
+                    else {
+                        console.log('station data batch is already executed in other pods.');
+                    }
                 });
             });
             // schedule.scheduleJob('0 4 1 * *', async function () {
@@ -230,3 +246,6 @@ function bootstrap() {
     });
 }
 bootstrap();
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}

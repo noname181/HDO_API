@@ -53,6 +53,7 @@ export interface PaymentNotificationRequest {
   month_rem_pnt?: string;
   day_rem_cnt?: string;
   reserve1?: string;
+  reserve2?: string;
   isRetry?: string;
 }
 

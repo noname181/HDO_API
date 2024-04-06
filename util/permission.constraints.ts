@@ -52,7 +52,8 @@ export enum PERMISSION_NAME {
   //cloudwatchLog = '콘솔로그',
   csDashboard = 'CS 대시보드',
   statistics = '통계',
-  chargingLog = '충전로그'
+  chargingLog = '충전로그',
+  paymentLog = '결제로그',
 }
 
 export enum PERMISSION_PAGE {
@@ -109,5 +110,6 @@ export enum PERMISSION_PAGE {
   //cloudwatchLog = '/config-log',
   csDashboard = '/cs-dashboard',
   statistics = '/statistics',
-  chargingLog = '/charging-log'
+  chargingLog = '/charging-log',
+  paymentLog = '/payment-log',
 }

@@ -133,9 +133,25 @@ async function service(req, res, _next) {
 //     "applied_unit_price": 315,
 //     "desired_kwh": 3
 // };
+
+  // 만약 isRetry = "Y"이면서 clId가 존재한다면 해당 충전로그를 기반으로 정보를 업데이트 해줌.
+  if(body?.reserve1 === "Y" && body?.reserve2) {
+    const clog = await models.sb_charging_log.findByPk(parseInt(body?.reserve2))
+    if (clog) {
+      body["cl_id"] = clog?.cl_id
+      body["chg_id"] = clog?.chg_id
+      body["connector_id"] = clog?.cl_channel
+      body["phone"] = clog?.receivePhoneNo
+      body["applied_unit_price"] = clog?.appliedUnitPrice
+      body["desired_kwh"] = clog?.desired_kwh
+      // 미결제건이라 pg_cno가 들어가지 않았을텐데, 여기서 업데이트해줌.
+      // 기존에 들어가 있던 주문번호, 승인번호는 일단 지우지 않음. 20240125
+      clog.pg_cno = body?.cno
+      await clog.save()
+    }
+  }
+
   console.log("노티 body", body)
-  
-  
   const now = getKoreanDate();
   const notification = buildNotificationModel(body);
   notification.createdAt = now;

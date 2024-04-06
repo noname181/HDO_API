@@ -2,6 +2,7 @@ const models = require('../../models');
 const { USER_ROLE } = require('../../middleware/role.middleware');
 const sequelize = require('sequelize');
 const { USER_TYPE } = require('../../util/tokenService');
+const { Sequelize } = require('sequelize');
 const { Op } = sequelize;
 
 module.exports = {
@@ -24,69 +25,67 @@ async function service(_request, _response, next) {
   const endDate = _request.query.endDate?.replace(/-/g, '') || null;
   const category = _request.query.division ? _request.query.division.toUpperCase() : '';
  
- 
 
-  try {    
-      const where = {
-        [Op.and]: [],
-      }; 
+  try {
 
-      if (startDate || endDate) {
-        if (startDate && endDate) {
-          where[Op.and].push({ data_day: { [Op.between]: [startDate, endDate] } });
-        }
-    
-        if (startDate) {
-          where[Op.and].push({ data_day: { [Op.gte]: startDate } });
-        }
-    
-        if (endDate) {
-          where[Op.and].push({ data_day: { [Op.lte]: endDate } });
-        }
+    let where = '';
+    if (startDate){
+      where = " where DATE_FORMAT(data_day, '%Y%m%d') > '"+startDate+"'";
+    }
+
+    if (endDate){
+      if (!where){
+        where = " where DATE_FORMAT(data_day, '%Y%m%d') < '"+endDate+"'";
       }
-   
-    const { count: totalCount, rows: result } = await models.bank_total_record.findAndCountAll({
-      attributes: {
-        include: [
-           [models.sequelize.literal(`
-            (
-              SELECT COUNT(*)
-              FROM data_results_tb
-              WHERE DATE_FORMAT(data_results_tb.data_day, '%Y%m%d') = DATE_FORMAT(bank_total_record.data_day, '%Y%m%d') AND data_results_tb.data_gubun = 'BAMK' AND data_results_tb.data_results = 'S' 
-            )
-            `), 'count_data_results_tb_S'],
-            [models.sequelize.literal(`
-            (
-              SELECT COUNT(*)
-              FROM data_results_tb
-              WHERE DATE_FORMAT(data_results_tb.data_day, '%Y%m%d') = DATE_FORMAT(bank_total_record.data_day, '%Y%m%d') AND data_results_tb.data_gubun = 'BAMK' AND data_results_tb.data_results = 'E' 
-            )
-            `), 'count_data_results_tb_E'],
-            [models.sequelize.literal(`
-            (
-              SELECT COUNT(*)
-              FROM erp_results_tb
-              WHERE DATE_FORMAT(erp_results_tb.data_day, '%Y%m%d') = DATE_FORMAT(bank_total_record.data_day, '%Y%m%d') AND erp_results_tb.erp_send_result = 'S'  
-            )
-            `), 'count_erp_results_tb_S'],
-            [models.sequelize.literal(`
-            (
-              SELECT COUNT(*)
-              FROM erp_results_tb
-              WHERE DATE_FORMAT(erp_results_tb.data_day, '%Y%m%d') = DATE_FORMAT(bank_total_record.data_day, '%Y%m%d') AND erp_results_tb.erp_send_result = 'E'
-            )
-            `), 'count_erp_results_tb_E'],
-        ],
-      },
-      where, 
-      offset: (pageNum - 1) * rowPerPage,
-      order: [['data_day', orderByQueryParam]],
-      limit: rowPerPage,
-    }); 
- 
+      else{
+        where += " AND DATE_FORMAT(data_day, '%Y%m%d') < '"+endDate+"'";
+      }
+    }
+
+    let queryString =
+    `
+    select A.*, B.totalCountERP
+    from
+    (
+      select *
+      from bank_total_records as A
+      ${where}
+    ) as A
+    left join
+    (
+      select DATE_FORMAT(data_day, '%Y%m%d') AS data_day, COUNT(data_day) as totalCountERP
+      from erp_requests_tb
+      where req_type = "F"
+      group by DATE_FORMAT(data_day, '%Y%m%d')
+    ) as B
+    on A.data_day = B.data_day
+    `;
+
+    const dailypaymentData = await models.sequelize.query(
+      queryString,
+      {
+        type: Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const totalCount = dailypaymentData.length;
+
+    var payments = [];
+
+    for(let data of dailypaymentData){
+      const totalCountERP = data.totalCountERP || 0;
+
+      payments.push({
+        totalCountERP: totalCountERP,
+        ...data,
+      });
+    }
+
+    payments.sort((a, b) => (a.sales_date < b.sales_date) ? 1 : ((b.sales_date < a.sales_date) ? -1 : 0));
+
     _response.json({
-      totalCount,
-      result,
+      totalCount: totalCount,
+      result: payments,
     });
   } catch (e) {
     next(e);

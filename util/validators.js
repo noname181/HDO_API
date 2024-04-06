@@ -9,14 +9,15 @@ const accountIdAdminValidator = (accountId) => {
 };
 
 const phoneNoValidator = (phoneNo) => {
+  // Remove hyphens from the phone number
+  const normalizePhoneNo = phoneNo.replace(/[^\d+]/g, '');
+
   if (!phoneNo) {
     return false;
   }
-  // Remove hyphens from the phone number
-  const normalizePhoneNo = phoneNo.replace(/-/g, '');
 
   // Allow phone numbers with 9 to 11 digits
-  const regex = /^[0-9]{9,11}$/;
+  const regex = /^([+]?)([\d]{0,2})[\d]{9,11}$/g;
   return regex.test(normalizePhoneNo);
 };
 

@@ -5,7 +5,6 @@ const { USER_ROLE, HTTP_STATUS_CODE } = require('../../../../middleware/role.mid
 const models = require('../../../../models');
 const axios = require('axios');
 const { BadRequestException } = require('../../../../exceptions/badRequest.exception');
-const { getAppleProfile } = require('./social-login');
 
 module.exports = {
   path: '/mobile/auth/sns/save',
@@ -309,8 +308,6 @@ async function service(_request, _response, next) {
 
   try {
     if (provider === 'APPLE') {
-      const data = await getAppleProfile(token);
-
       const hasConnectToApple = await models.UserOauth.findOne({
         where: {
           [sequelize.Op.and]: [
@@ -329,9 +326,9 @@ async function service(_request, _response, next) {
       }
 
       const oAuthCreateInput = {
-        oAuthId: data['sub'],
+        oAuthId: token,
         provider: 'APPLE',
-        email: data.email || getUser.email,
+        email: getUser.email,
         profileImage: null,
         usersNewId: getUser.id,
         accountId: getUser.accountId,

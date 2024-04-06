@@ -106,7 +106,8 @@ async function service(request: Request, response: Response, next: NextFunction)
         //PERMISSION_NAME.chargerErrorHistory,
         //PERMISSION_NAME.chargerDiagnostic,
         //PERMISSION_NAME.cloudwatchLog,
-        PERMISSION_NAME.chargingLog
+        PERMISSION_NAME.chargingLog,
+        PERMISSION_NAME.paymentLog,
       ],
     },
     dashBoard: {

@@ -31,12 +31,12 @@ async function service(_request, _response, next) {
   const endDate = _request.query.endDate || null;
   const division = _request.query.division ? _request.query.division.toUpperCase() : null;
   const status = _request.query.status || null;
-  
+
   const whereQuery = {
     [Op.and]: [{}],
   };
-  
-  whereQuery[Op.and].push({ [Op.or]: [{data_gubun: "STATION"}, {data_gubun: "USER"}, {data_gubun: "SITE"}] });
+
+  // whereQuery[Op.and].push({ [Op.or]: [{ data_gubun: 'STATION' }, { data_gubun: 'USER' }, { data_gubun: 'SITE' }] });
 
   if (startDate && endDate) {
     const start = new Date(startDate);
@@ -44,7 +44,7 @@ async function service(_request, _response, next) {
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
     whereQuery[Op.and].push({
-        data_time: {
+      data_time: {
         [Op.between]: [start, end],
       },
     });
@@ -52,7 +52,7 @@ async function service(_request, _response, next) {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     whereQuery[Op.and].push({
-        data_time: {
+      data_time: {
         [Op.gte]: start,
       },
     });
@@ -67,27 +67,33 @@ async function service(_request, _response, next) {
   }
 
   if (division) {
-    if (division.trim() === 'STATION') {
-      whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
-    }
+    whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
 
-    if (division.trim() === 'USER') {
-      whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
-    }
+    // if (division.trim() === 'STATION') {
+    //   whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
+    // }
 
-    if (division.trim() === 'SITE') {
-      whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
-    }
+    // if (division.trim() === 'USER') {
+    //   whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
+    // }
+
+    // if (division.trim() === 'SITE') {
+    //   whereQuery[Op.and].push({ data_gubun: { [Op.eq]: division } });
+    // }
 
     // if (division.trim() === 'KICC') {
-    //   whereQuery[Op.and].push({ [Op.or]: [{data_gubun: "KICC"}, {data_gubun: "DEPOSIT"}] });
+    //   whereQuery[Op.and].push({ data_gubun: 'KICC' });
+    // }
+
+    // if (division.trim() === 'DEPOSIT') {
+    //   whereQuery[Op.and].push({ data_gubun: 'DEPOSIT' });
     // }
   }
 
-  if(status){
+  if (status) {
     if (status === 'S') {
       whereQuery[Op.and].push({ data_results: { [Op.eq]: status } });
-    }else{
+    } else {
       whereQuery[Op.and].push({ data_results: { [Op.ne]: 'S' } });
     }
   }

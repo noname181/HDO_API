@@ -67,6 +67,7 @@ async function service(_request, _response, next) {
          
           attributes: [ 
             'id',
+            'stat',
             'statNm',
             'statId',
             'chgerType',
@@ -82,6 +83,11 @@ async function service(_request, _response, next) {
             'limitDetail',
             'note', 
             'coordinate',
+            'output3',
+            'output7',
+            'output50',
+            'output100', 
+            'output200',
              [ 
                 models.sequelize.literal(`
                 (( 6371 * acos( cos( radians(${userLocation.latitude}) ) * cos( radians( envCharger.lat ) ) * cos( radians( envCharger.lng ) - radians(${userLocation.longitude}) ) + sin( radians(${userLocation.latitude}) ) * sin( radians( envCharger.lat ) ) ) ) * 1000)  
@@ -138,7 +144,20 @@ async function service(_request, _response, next) {
                   model: models.ChargerModel,
                   as: 'chargerModel',
                   required: false,
-                  attributes: { exclude: ['deletedAt', 'createdWho', 'updatedWho'] },
+                  attributes: 
+                  ['id', 'modelCode', 'manufacturerId', 'modelName', 'maxKw',  [
+                    models.sequelize.literal(
+                      '(SELECT descInfo FROM CodeLookUps WHERE divCode = "SPEED_TYPE" AND descVal = speedType LIMIT 1)'
+                    ),
+                    'speedType',
+                  ],
+                  [
+                    models.sequelize.literal(
+                      '(SELECT descInfo FROM CodeLookUps WHERE divCode = "CON_TYPE" AND descVal = connectorType LIMIT 1)'
+                    ),
+                    'connectorType',
+                  ], 'channelCount', 'lastFirmwareVer', 'pncAvailable', 'useYN', 'createdAt', 'updatedAt'],
+                  //exclude: ['deletedAt', 'createdWho', 'updatedWho'],
                 },  
               ],
             },
@@ -176,13 +195,23 @@ async function service(_request, _response, next) {
 
         let envStation = null;
         if (value.envCharger) {
-          const stationStatus = value.envCharger.envChargers.map((item) => Number(item.stat));
-          maxKw = Math.max(...value.envCharger.envChargers.flatMap((item) => item.output));
-
+          // const stationStatus = value.envCharger.envChargers.map((item) => Number(item.stat));
+          // maxKw = Math.max(...value.envCharger.envChargers.flatMap((item) => item.output));
+          if(value.envCharger.output200){
+            maxKw = 200;
+          } else if(value.envCharger.output100){
+            maxKw = 100;
+          } else if(value.envCharger.output50){
+            maxKw = 50;
+          } else if(value.envCharger.output7){
+            maxKw = 7;
+          }  else if(value.envCharger.output3){
+            maxKw = 3;
+          }
           envStation = {
             ...value.envCharger,
-            envChargers: value?.envCharger?.envChargers,
-            status: stationStatus.includes(2) ? 'ACTIVE' : 'INACTIVE',
+            envChargers: value.envCharger?.envChargers,
+            status: value.envCharger.stat === 2 ? 'ACTIVE' : 'INACTIVE',
           };
         }
         if(value.charger) {

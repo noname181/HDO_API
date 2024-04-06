@@ -128,7 +128,12 @@ const transformResponse = (role) => {
         permission_constraints_1.PERMISSION_NAME.review,
     ];
     const noticePermission = [];
-    const cs = [permission_constraints_1.PERMISSION_NAME.csMain, permission_constraints_1.PERMISSION_NAME.template, permission_constraints_1.PERMISSION_NAME.csDashboard, permission_constraints_1.PERMISSION_NAME.statistics];
+    const cs = [
+        permission_constraints_1.PERMISSION_NAME.csMain,
+        permission_constraints_1.PERMISSION_NAME.template,
+        permission_constraints_1.PERMISSION_NAME.csDashboard,
+        permission_constraints_1.PERMISSION_NAME.statistics,
+    ];
     const csPermission = [];
     const consultation = [permission_constraints_1.PERMISSION_NAME.consultation];
     const consultationPermission = [];
@@ -143,7 +148,8 @@ const transformResponse = (role) => {
         //PERMISSION_NAME.chargerErrorHistory,
         //PERMISSION_NAME.chargerDiagnostic,
         //PERMISSION_NAME.cloudwatchLog,
-        permission_constraints_1.PERMISSION_NAME.chargingLog
+        permission_constraints_1.PERMISSION_NAME.chargingLog,
+        permission_constraints_1.PERMISSION_NAME.paymentLog,
     ];
     const chargingLogsPermission = [];
     const dashBoard = [permission_constraints_1.PERMISSION_NAME.dashBoard];

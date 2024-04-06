@@ -70,7 +70,7 @@ async function service(_request, _response, next) {
 
     if (expectedAmt > 10) {
       // 결제를 발생시킬 수 있는 금액인 경우
-      const paymentResult = await payRequestFromKICC(expectedAmt, billingKey, payMallId, true);
+      const paymentResult = await payRequestFromKICC(expectedAmt, billingKey, payMallId, true, cl_id);
 
       // * LOG KICC data
       try {

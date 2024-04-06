@@ -210,12 +210,13 @@ const getOrgsDBQuery = (query, orgId = 0, orgType = '') => {
     if (!query.searchVal) {
         return dbQuery;
     }
+    const searchValue = query.searchVal.replace(/-/g, '');
     if (query.searchKey) {
         const searchKeyQuery = searchKeyTransformer(query.searchKey, allowSearchKey);
-        dbQuery.push({ [searchKeyQuery]: { [sequelize_1.Op.like]: `%${query.searchVal}%` } });
+        dbQuery.push(models.sequelize.where(models.sequelize.fn('REPLACE', models.sequelize.col(searchKeyQuery), '-', ''), 'LIKE', `%${searchValue}%`));
         return dbQuery;
     }
-    const searchKeyQuery = searchValQueryBuilder(query.searchVal, allowSearchKey);
+    const searchKeyQuery = searchValQueryBuilder(searchValue, allowSearchKey);
     dbQuery.push({ [sequelize_1.Op.or]: searchKeyQuery });
     return dbQuery;
 };
@@ -240,5 +241,7 @@ const searchKeyTransformer = (searchKey, allowSearchKey) => {
     return allowSearchKey.find((item) => item.toLowerCase() === searchKey.toLowerCase()) || allowSearchKey[0];
 };
 const searchValQueryBuilder = (searchVal, allowSearchKey) => {
-    return allowSearchKey.map((item) => ({ [item]: { [sequelize_1.Op.like]: `%${searchVal}%` } }));
+    return allowSearchKey.map((item) => {
+        return models.sequelize.where(models.sequelize.fn('REPLACE', models.sequelize.col(`Org.${item}`), '-', ''), 'LIKE', `%${searchVal}%`);
+    });
 };

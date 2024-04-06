@@ -266,9 +266,25 @@ async function service(_request, _response, next) {
             const card_id = sb_charge_request?.card_id;
             const card = await models.BankCard.findByPk(card_id, {});
             if (card && card?.billingKey) {
+              const billingKey = card?.billingKey
               // 모든 값이 유효하게 들어가 있지않으면 에러핸들링도 하지 않고 처리를 안하고 응답만 한다
-              const usedKwh = clog?.cl_stop_meter - clog?.cl_start_meter ?? 0;
-              let chargeFee = Math.floor(usedKwh * clog?.appliedUnitPrice * 0.001);
+              let usedKwh = parseInt(clog?.cl_stop_meter) - parseInt(clog?.cl_start_meter) ?? clog?.cl_kwh;
+              let originalFee = (usedKwh ?? 0) * clog?.appliedUnitPrice * 0.001
+              let adjustedKwh;
+              if (parseFloat(usedKwh) > parseFloat(clog?.desired_kwh)) {
+                clog.ignored_kwh = usedKwh - clog?.desired_kwh;
+                adjustedKwh = clog?.desired_kwh;
+              } else if (clog?.desired_amt && originalFee > clog?.desired_amt){
+                // 희망금액 기준으로 오바되도 깎아준다.
+                let adjustedKwhFromAmt = Math.ceil(clog?.desired_amt / clog?.appliedUnitPrice * 1000)
+                clog.ignored_kwh = usedKwh - adjustedKwhFromAmt
+                adjustedKwh = adjustedKwhFromAmt
+              } else {
+                adjustedKwh = usedKwh;
+              }
+              const chargeFee = Math.floor((adjustedKwh ?? 0) * clog?.appliedUnitPrice * 0.001);
+              clog.chargeFee = chargeFee;
+
               if (chargeFee >= 10) {
                 sb_charge_request.actual_calculated_amt = chargeFee;
                 await sb_charge_request.save();

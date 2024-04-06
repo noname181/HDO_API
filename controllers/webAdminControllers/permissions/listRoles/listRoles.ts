@@ -163,7 +163,12 @@ export const transformResponse = (role: any): RoleResponse => {
   ];
   const noticePermission: PermissionMap[] = [];
 
-  const cs = [PERMISSION_NAME.csMain, PERMISSION_NAME.template, PERMISSION_NAME.csDashboard, PERMISSION_NAME.statistics];
+  const cs = [
+    PERMISSION_NAME.csMain,
+    PERMISSION_NAME.template,
+    PERMISSION_NAME.csDashboard,
+    PERMISSION_NAME.statistics,
+  ];
   const csPermission: PermissionMap[] = [];
 
   const consultation = [PERMISSION_NAME.consultation];
@@ -181,7 +186,8 @@ export const transformResponse = (role: any): RoleResponse => {
     //PERMISSION_NAME.chargerErrorHistory,
     //PERMISSION_NAME.chargerDiagnostic,
     //PERMISSION_NAME.cloudwatchLog,
-    PERMISSION_NAME.chargingLog
+    PERMISSION_NAME.chargingLog,
+    PERMISSION_NAME.paymentLog,
   ];
   const chargingLogsPermission: PermissionMap[] = [];
 

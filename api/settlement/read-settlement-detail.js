@@ -2,6 +2,7 @@ const models = require('../../models');
 const { USER_ROLE } = require('../../middleware/role.middleware');
 const sequelize = require('sequelize');
 const { USER_TYPE } = require('../../util/tokenService');
+const { Sequelize } = require('sequelize');
 const { Op } = sequelize;
 
 module.exports = {
@@ -21,228 +22,179 @@ async function service(_request, _response, next) {
   const searchKey = _request.query.searchKey ? _request.query.searchKey.trim() : '';
   const searchVal = _request.query.searchVal ? _request.query.searchVal.trim() : '';
   const date = _request.query.date || null;
-  const category = _request.query.division ? _request.query.division.toUpperCase() : '';
+  //const category = _request.query.division ? _request.query.division.toUpperCase() : '';
 
   try {
-    const SEARCH_KEY = {
-      CHGS_STATION_ID: 'chgs_station_id',
-      CHGS_NAME: 'chgs_name',
-    };
+    let where = '';
 
-    const where = {
-      [Op.and]: [],
-    };
-
-    if (date) {
-      where[Op.and].push({ data_day: date });
-    }
     switch (searchKey) {
-      case SEARCH_KEY.CHGS_STATION_ID:
-        where[Op.and].push({
-          '$chargingStation.chgs_station_id$': { [Op.like]: '%' + searchVal + '%' },
-        });
+      case 'chgs_station_id':
+        where += ' C.chgs_station_id like "%' + searchVal + '%" ';
         break;
-      case SEARCH_KEY.CHGS_NAME:
-        where[Op.and].push({
-          '$chargingStation.chgs_name$': { [Op.like]: '%' + searchVal + '%' },
-        });
+      case 'chgs_name':
+        where += ' A.station_name like "%' + searchVal + '%" ';
         break;
       default:
         if (searchVal) {
-          where[Op.and].push({
-            [Op.or]: [
-              { '$chargingStation.chgs_station_id$': { [Op.like]: '%' + searchVal + '%' } },
-              { '$chargingStation.chgs_name$': { [Op.like]: '%' + searchVal + '%' } },
-            ],
-          });
+          where += ' C.chgs_station_id like "%' + searchVal + '%" OR A.station_name like "%' + searchVal + '%" ';
         }
         break;
     }
 
-    if (_request.query.area) where[Op.and].push({ '$charger_records_tb.area_id$': _request.query.area });
-    if (_request.query.branch) where[Op.and].push({ '$charger_records_tb.branch_id$': _request.query.branch });
-
-    if (category) where[Op.and].push({ '$chargingStation.org.category$': category });
-
-    const includeMore = [
-      {
-        model: models.sb_charging_station,
-        attributes: { exclude: ['deletedAt'] },
-        as: 'chargingStation',
-        paranoid: false,
-      },
-    ];
-
-    // let getQuery;
-    const { count: totalCount, rows: result } = await models.charger_records_tb.findAndCountAll({
-      where,
-      include: includeMore,
-      attributes: [
-        'data_day',
-        'charger_id',
-        'station_id',
-        'erp_id',
-        'daycharge_amount',
-        'dayignore_amount',
-        'org_id',
-        'mall_id',
-        'sales_amount',
-        'payment_method',
-        'area_id',
-        'branch_id',
-        'station_name',
-        'transaction_count',
-        'cancel_count',
-        'cancel_amount',
-        'commission_amount',
-        'deposit_amount', 
-        [
-          models.sequelize.literal(
-            `(SELECT erp_send_result FROM erp_requests_tb WHERE data_day = charger_records_tb.data_day AND erp_id = charger_records_tb.erp_id AND (req_type <> 'TN' OR req_type is null) ORDER BY id DESC LIMIT 1)`
-          ),
-          'erp_send_result0',
-        ],
-        [
-          models.sequelize.literal(
-            `(SELECT erp_send_result FROM erp_requests_tb WHERE data_day = charger_records_tb.data_day AND erp_id = charger_records_tb.erp_id AND req_type = 'TN' ORDER BY id DESC LIMIT 1)`
-          ),
-          'erp_send_result',
-        ],
-        [
-          models.sequelize.literal(
-            `(SELECT result FROM settlement_resend_results WHERE data_day = charger_records_tb.data_day AND erp_id = charger_records_tb.erp_id AND payment_method = charger_records_tb.payment_method ORDER BY id DESC LIMIT 1)`
-          ),
-          'resend_result',
-        ],
-        [
-          models.sequelize.literal(
-            `(SELECT descInfo FROM CodeLookUps WHERE divCode = 'BRANCH' AND descVal = charger_records_tb.branch_id LIMIT 1)`
-          ),
-          'branchName',
-        ],
-        [
-          models.sequelize.literal(
-            `(SELECT descInfo FROM CodeLookUps WHERE divCode = 'AREA' AND descVal = charger_records_tb.area_id LIMIT 1)`
-          ),
-          'areaName',
-        ],
-      ],
-      offset: (pageNum - 1) * rowPerPage,
-      limit: rowPerPage,
-      // logging: (query) => {
-      //   console.log('query:::::', query);
-      //   getQuery = query;
-      // },
-    });
-    const result2 = [];
-
-    for (let data of result) {
-      const data_day = parseSalesDate(data.dataValues.data_day.toString());
-      if (data.dataValues.daycharge_amount)
-        data.dataValues.daycharge_amount = formatKwh(data.dataValues.daycharge_amount) || 0;
-      else data.dataValues.daycharge_amount = 0;
-
-      if (data.dataValues.dayignore_amount)
-        data.dataValues.dayignore_amount = formatKwh(data.dataValues.dayignore_amount) || 0;
-      else data.dataValues.dayignore_amount = 0;
-
-      data.dataValues.daycharge_amount_minus_dayignore_amount =
-        data.dataValues.daycharge_amount - data.dataValues.dayignore_amount;
-
-      data.dataValues.daycharge_amount_minus_dayignore_amount =
-        data.dataValues.daycharge_amount - data.dataValues.dayignore_amount;
-
-      data.dataValues.sales_amount = data.dataValues.sales_amount || 0;
-
-      data.dataValues.cancel_amount = data.dataValues.cancel_amount || 0;
-
-      data.dataValues.deposit_amount = data.dataValues.deposit_amount || 0;
-
-      data.dataValues.sum_sales_amount_cancel_amount_commission_amount =
-        data.dataValues.sales_amount + data.dataValues.cancel_amount - data.dataValues.commission_amount;
-
-      const item = {
-        ...data.dataValues,
-        data_day,
-      };
-      result2.push(item);
+    if (_request.query.area) {
+      if(where){
+        where += ' AND ';
+      }
+      where += ' A.areaName = "' + _request.query.area + '" ';
     }
 
-    const sum = await models.charger_records_tb.findOne({
-      attributes: [
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.sales_amount, 0)')),
-          'sum_sales_amount',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.cancel_count, 0)')),
-          'sum_cancel_count',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.cancel_amount, 0)')),
-          'sum_cancel_amount',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.daycharge_amount, 0)')),
-          'sum_daycharge_amount',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.dayignore_amount, 0)')),
-          'sum_dayignore_amount',
-        ],
-        [
-          models.sequelize.fn(
-            'SUM',
-            models.sequelize.literal(
-              'COALESCE(charger_records_tb.daycharge_amount, 0) - COALESCE(charger_records_tb.dayignore_amount, 0)'
-            )
-          ),
-          'sum_daycharge_amount_minus_dayignore_amount',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.transaction_count, 0)')),
-          'sum_transaction_count',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.commission_amount, 0)')),
-          'sum_commission_amount',
-        ],
-        [
-          models.sequelize.fn('SUM', models.sequelize.literal('COALESCE(charger_records_tb.deposit_amount, 0)')),
-          'sum_deposit_amount',
-        ],
-        [
-          models.sequelize.fn(
-            'SUM',
-            models.sequelize.literal(
-              'COALESCE(charger_records_tb.sales_amount, 0) + COALESCE(charger_records_tb.cancel_amount, 0) - COALESCE(charger_records_tb.commission_amount, 0)'
-            )
-          ),
-          'sum_sales_amount_cancel_amount_commission_amount',
-        ],
-        // [
-        //   models.sequelize.fn('ROUND', models.sequelize.fn('SUM', models.sequelize.literal('(COALESCE(chargingLogs.cl_kwh, 0)/1000) + (COALESCE(chargingLogs.ignored_kwh, 0)/1000)')), 2),
-        //   'sumIgnoredKwh'
-        // ],
-      ],
-      where,
-      include: includeMore,
-    });
+    if (_request.query.branch) {
+      if(where){
+        where += ' AND ';
+      }
+      where += ' A.branchName = "' + _request.query.branch + '" ';
+    }
+
+    let queryString =
+      `select A.*, 
+      B.erp_send_result as erp_send_result_last, B.erp_check_result as erp_check_result_last, B.erp_send_message as erp_send_message_last, B.erp_check_message as erp_check_message_last, 
+      B2.erp_send_result as erp_send_result_first, B2.erp_check_result as erp_check_result_first, B2.erp_send_message as erp_send_message_first, B2.erp_check_message as erp_check_message_first ,
+      B3.countERP,
+      C.chgs_station_id as chargingStation, C.chgs_name
+      from
+      (
+        select  
+        erp_id, 
+        station_id,
+        station_name,
+        DATE_FORMAT(data_day, '%Y%m%d') AS data_day, 
+        SUM(sales_amount) AS sales_amount, 
+        SUM(dayignore_amount) AS dayignore_amount, 
+        SUM(commission_amount) AS commission_amount, 
+        SUM(cancel_amount) AS cancel_amount,
+        SUM(cancel_count) AS cancel_count,
+        SUM(transaction_count) AS transaction_count,
+        SUM(daycharge_amount) AS daycharge_amount,
+        (SELECT descInfo FROM CodeLookUps WHERE divCode = 'BRANCH' AND descVal = charger_records_tb.branch_id LIMIT 1) as branchName,
+        (SELECT descInfo FROM CodeLookUps WHERE divCode = 'AREA' AND descVal = charger_records_tb.area_id LIMIT 1) as areaName
+        from charger_records_tb
+        where DATE_FORMAT(data_day, '%Y%m%d') = '${date}'
+        group by erp_id, DATE_FORMAT(data_day, '%Y%m%d')
+      ) as A
+      left join 
+      (
+        select data_day, erp_id, erp_send_result, erp_send_message, erp_check_result, erp_check_message
+        from erp_requests_tb 
+        where (data_day, erp_id, erp_trial, req_type) in (
+          select DATE_FORMAT(data_day, '%Y%m%d') AS data_day, erp_id, max(erp_trial), req_type
+          from erp_requests_tb
+          where req_type = 'C' 
+          group by erp_id, DATE_FORMAT(data_day, '%Y%m%d')
+        )
+      ) as B
+      on A.erp_id = B.erp_id and A.data_day = B.data_day
+      left join 
+      (
+        select data_day, erp_id, erp_send_result, erp_send_message, erp_check_result, erp_check_message 
+        from erp_requests_tb 
+        where (data_day, erp_id, erp_trial, req_type) in (
+          select DATE_FORMAT(data_day, '%Y%m%d') AS data_day, erp_id, min(erp_trial), req_type
+          from erp_requests_tb
+          where req_type = 'C' 
+          group by erp_id, DATE_FORMAT(data_day, '%Y%m%d')
+        )
+      ) as B2
+      on A.erp_id = B2.erp_id and A.data_day = B2.data_day
+      left join
+      (
+        select data_day, erp_id, COUNT(data_day) as countERP
+        from erp_requests_tb
+        where req_type = "C"
+        group by erp_id, DATE_FORMAT(data_day, '%Y%m%d')
+      ) as B3
+      on A.erp_id = B3.erp_id and A.data_day = B3.data_day
+      left join sb_charging_stations C
+      on A.station_id = C.chgs_id
+      `;
+
+    if (where){
+      queryString += ` where ${where} `;
+    }
+    const settlementData = await models.sequelize.query(
+      queryString,
+      {
+        type: Sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const totalCount = settlementData.length;
+
+    const result2 = [];
+
+    let sum_sales_amount = 0;
+    let sum_cancel_count = 0;
+    let sum_cancel_amount = 0;
+    let sum_daycharge_amount = 0;
+    let sum_dayignore_amount = 0;
+    let sum_daycharge_amount_minus_dayignore_amount = 0;
+    let sum_transaction_count = 0;
+    let sum_commission_amount = 0;
+    let sum_deposit_amount = 0;
+    let sum_sales_amount_cancel_amount_commission_amount = 0;
+    let totalCountERP = 0;
+    let totalCountPG = 0;
+
+    for (let data of settlementData) {
+      data.daycharge_amount = formatKwh(data.daycharge_amount);
+      data.dayignore_amount = formatKwh(data.dayignore_amount);
+      const data_day = parseSalesDate(data.data_day.toString());
+      const sales_amount = Number(data.sales_amount) || 0;
+      const cancel_amount = Number(data.cancel_amount) || 0;
+      const commission_amount = Number(data.commission_amount) || 0;
+      const daycharge_amount = Number(data.daycharge_amount) || 0;
+      const dayignore_amount = Number(data.dayignore_amount) || 0;
+      const deposit_amount = parseInt(sales_amount) + parseInt(cancel_amount) - parseInt(commission_amount);
+      const daycharge_amount_minus_dayignore_amount = daycharge_amount - dayignore_amount;
+      const countERP = Number(data.countERP) || 0;
+      const transaction_count = Number(data.transaction_count) || 0;
+      const cancel_count = Number(data.cancel_count) || 0;
+
+      const item = {
+        data_day,
+        deposit_amount,
+        daycharge_amount_minus_dayignore_amount,
+        ...data,
+      };
+      result2.push(item);
+
+      sum_sales_amount += sales_amount;
+      sum_cancel_count += Number(data.cancel_count);
+      sum_cancel_amount += cancel_amount;
+      sum_daycharge_amount += daycharge_amount;
+      sum_dayignore_amount += dayignore_amount;
+      sum_daycharge_amount_minus_dayignore_amount += daycharge_amount_minus_dayignore_amount;
+      sum_transaction_count += Number(data.transaction_count);
+      sum_commission_amount += commission_amount;
+      sum_deposit_amount += deposit_amount;
+      sum_sales_amount_cancel_amount_commission_amount += deposit_amount;
+      totalCountERP += countERP;
+      totalCountPG += transaction_count + cancel_count;
+    }
 
     _response.json({
       totalCount,
-      sum_sales_amount: sum?.dataValues?.sum_sales_amount || 0,
-      sum_cancel_count: sum?.dataValues?.sum_cancel_count || 0,
-      sum_cancel_amount: sum?.dataValues?.sum_cancel_amount || 0,
-      sum_daycharge_amount: formatKwh(sum?.dataValues?.sum_daycharge_amount) || 0,
-      sum_dayignore_amount: formatKwh(sum?.dataValues?.sum_dayignore_amount) || 0,
-      sum_daycharge_amount_minus_dayignore_amount:
-        formatKwh(sum?.dataValues?.sum_daycharge_amount_minus_dayignore_amount) || 0,
-      sum_transaction_count: sum?.dataValues?.sum_transaction_count || 0,
-      sum_commission_amount: sum?.dataValues?.sum_commission_amount || 0,
-      sum_deposit_amount: sum?.dataValues?.sum_deposit_amount || 0,
-      sum_sales_amount_cancel_amount_commission_amount:
-        sum?.dataValues?.sum_sales_amount_cancel_amount_commission_amount || 0,
+      sum_sales_amount: sum_sales_amount,
+      sum_cancel_count: sum_cancel_count,
+      sum_cancel_amount: sum_cancel_amount,
+      sum_daycharge_amount: sum_daycharge_amount,
+      sum_dayignore_amount: sum_dayignore_amount,
+      sum_daycharge_amount_minus_dayignore_amount: sum_daycharge_amount_minus_dayignore_amount,
+      sum_transaction_count: sum_transaction_count,
+      sum_commission_amount: sum_commission_amount,
+      sum_deposit_amount: sum_deposit_amount,
+      sum_sales_amount_cancel_amount_commission_amount: sum_sales_amount_cancel_amount_commission_amount,
+      totalCountERP: totalCountERP,
+      totalCountPG: totalCountPG,
       result: result2,
     });
   } catch (e) {
@@ -271,7 +223,7 @@ function parseSalesDate(sale_date) {
 
 function formatKwh(num) {
   if (!num) {
-    return '';
+    return 0;
   }
   return parseFloat(num / 1000).toFixed(2);
 }

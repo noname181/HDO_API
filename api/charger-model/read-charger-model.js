@@ -53,8 +53,20 @@ async function service(req, res, next) {
         ],
         'modelName',
         'maxKw',
-        'speedType',
-        'connectorType',
+        [
+          sequelize.literal(
+            '(SELECT descInfo FROM CodeLookUps WHERE divCode = "SPEED_TYPE" AND descVal = ChargerModel.speedType LIMIT 1)'
+          ),
+          'speedType',
+        ],
+        [
+          sequelize.literal(
+            '(SELECT descInfo FROM CodeLookUps WHERE divCode = "CON_TYPE" AND descVal = ChargerModel.connectorType LIMIT 1)'
+          ),
+          'connectorType',
+        ],
+        // 'speedType',
+        // 'connectorType',
         'channelCount',
         'lastFirmwareVer',
         'pncAvailable',
