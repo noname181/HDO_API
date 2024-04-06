@@ -1,0 +1,29 @@
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+carInfo Success
+<script>
+  var androidNice = {
+  }
+  console.log("androidNice", androidNice)
+
+  // Webview 사용 시,
+  // FlutterHandler.postMessage(JSON.stringify(androidNice));
+
+  // In case Flutter inappwebview
+  window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+    if (window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }else{
+      window.flutter_inappwebview._callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }
+  });
+</script>
+</body>
+</html>

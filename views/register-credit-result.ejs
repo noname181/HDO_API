@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyPay - 카드 등록</title>
+</head>
+<body>
+<input type="hidden" name="result" id="result" value="<%=result%>">
+<input type="hidden" name="message" id="message" value="<%=message%>">
+<script>
+  const result = window.document.getElementById('result').value;
+  const message = window.document.getElementById('message').value;
+  const payload = {
+    /** one of 'success', 'fail' */
+    result: result ?? 'failed',
+    /** contains error message if result is 'fail' */
+    message: message ?? '',
+  };
+
+  /**
+   * Register 'on flutter load' event handler that calls flutter callback which accepts card register result
+   */
+  window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+    if (window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('FlutterHandler', JSON.stringify(payload));
+    }else{
+      window.flutter_inappwebview._callHandler('FlutterHandler', JSON.stringify(payload));
+    }
+  });
+</script>
+</body>
+</html>

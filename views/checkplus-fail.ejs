@@ -1,0 +1,52 @@
+<html>
+<head>
+    <title>안심본인인증 실패</title>
+</head>
+<body>
+<center>
+    <p><p><p><p>
+        본인인증이 실패하였습니다.<br>
+    <table width=500 border=1>
+        <tr>
+            <td>message</td>
+            <td><%=sRtnMSG%></td>
+        </tr>
+        <tr>
+            <td>요청 번호</td>
+            <td><%=requestnumber%></td>
+        </tr>
+        <tr>
+            <td>본인인증 실패 코드</td>
+            <td><%=errcode%></td>
+        </tr>
+        <tr>
+            <td>인증수단</td>
+            <td><%=authtype%></td>
+        </tr>
+        </tr>
+    </table>
+</center>
+<script>
+  var androidNice = {
+    isPass: false,
+    sRtnMSG: window.document.getElementById('sRtnMSG').value,
+    requestnumber: window.document.getElementById('requestnumber').value,
+    errcode: window.document.getElementById('errcode').value,
+    authtype: window.document.getElementById('authtype').value,
+  }
+  console.log("androidNice", androidNice)
+
+  // Webview 사용 시,
+  // FlutterHandler.postMessage(JSON.stringify(androidNice));
+
+  // In case Flutter inappwebview
+  window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+    if (window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }else{
+      window.flutter_inappwebview._callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+version: 0.2
+
+env:
+  git-credential-helper: yes
+  variables:
+    ECR_REGISTRY: "230483255586.dkr.ecr.ap-northeast-2.amazonaws.com"
+    ECR_REPOSITORY: "hdoev-api-total"
+    GITOPS_CODECOMMIT_REPOSITORY: "dev-hdoev-devops"
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - git version
+      - docker version
+      - python --version
+      - pip --version
+      - export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/
+  build:
+    commands:
+      - echo Build Starting on `date`
+      - IMAGE_TAG="$(date +%Y-%m-%d.%H.%M.%S).$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - AWS_ECR_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ECR_URI
+      - docker push $AWS_ECR_URI
+  post_build:
+    commands:
+      - colon=$(python -c "print(chr(58))")
+      - pip install git-remote-codecommit
+      - git clone codecommit::$AWS_DEFAULT_REGION://$GITOPS_CODECOMMIT_REPOSITORY
+      - cd $GITOPS_CODECOMMIT_REPOSITORY && ls
+      - sed -i "s|          image$colon.*|          image$colon $ECR_REGISTRY/$ECR_REPOSITORY$colon$IMAGE_TAG|g" ./app/api-total/deployment.yaml
+      - git config --global user.email "test@test.com"
+      - git config --global user.name "Codebuild Bot"
+      - git add .
+      - git commit -m "tag is updated to $IMAGE_TAG"
+      - git push -u origin master

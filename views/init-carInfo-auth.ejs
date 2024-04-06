@@ -1,0 +1,44 @@
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>본인인증 통합창</title>
+    <script type="text/javascript">
+      function page_link4() {
+        window.open("", "privde", "height=0, width=0");
+        document.provideHashFromFixed.target = "privde";
+        document.provideHashFromFixed.submit();
+      }
+
+      window.onload = function() {
+        // 페이지 로드 시 폼 자동 제출
+        document.provideHashFromFixed.submit();
+      };
+    </script>
+</head>
+<body>
+<!-- 개발 서버 : https://14.35.194.170:8080/aio365/provide/ProvideContent.do -->
+<!-- 운영 서버 : https://car365.go.kr/aio365/provide/ProvideContent.do -->
+<!--<form id="provideHashFromFixed" name="provideHashFromFixed" method="post" action="https://14.35.194.170:8080/aio365/provide/ProvideContent.do">-->
+<form id="provideHashFromFixed" name="provideHashFromFixed" method="post" action="https://car365.go.kr/aio365/provide/ProvideContent.do">
+    <%
+    Object.keys(fixedMap).forEach(function(key) {
+    %>
+        <input type='hidden' name='<%= key %>' id='<%= key %>' value='<%= fixedMap[key] %>'>
+    <%
+    });
+    %>
+</form>
+
+<div>
+    <table>
+        <caption>서비스 이동</caption>
+        <tbody>
+        <tr>
+            <td>TS 첨부형 API 본인인증서비스</td>
+            <!-- 버튼 삭제 -->
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

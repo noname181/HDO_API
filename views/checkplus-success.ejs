@@ -1,0 +1,61 @@
+<!--
+/********************************************************************************************************************************************
+		NICE평가정보 Copyright(c) KOREA INFOMATION SERVICE INC. ALL RIGHTS RESERVED
+
+		서비스명 : 본인인증 (CheckPlus) 서비스
+		페이지명 : 본인인증 (CheckPlus) 호출 페이지
+*********************************************************************************************************************************************/
+-->
+<html>
+<head>
+    <title>NICE평가정보 - 본인인증</title>
+</head>
+<body>
+<center>
+    <p><p><p><p>
+    본인인증이 완료 되었습니다.
+    <br>
+
+    <input type="hidden" name="username" id="username" value="<%=name%>">
+    <input type="hidden" name="mobileno"  id="mobileno"value="<%=mobileno%>">
+    <input type="hidden" name="gender" id="gender" value="<%=gender%>">
+    <input type="hidden" name="birthdate" id="birthdate" value="<%=birthdate%>">
+    <input type="hidden" name="dupinfo" id="dupinfo" value="<%=dupinfo%>">
+    <input type="hidden" name="sConnInfo" id="sConnInfo" value="<%=conninfo%>">
+    <input type="hidden" name="authtype" id="authtype" value="<%=authtype%>">
+    <input type="hidden" name="nationalinfo" id="nationalinfo" value="<%=nationalinfo%>">
+    <input type="hidden" name="accountId" id="accountId" value="<%=accountId%>">
+    <input type="hidden" name="message" id="message" value="<%=message%>">
+    <input type="hidden" name="status" id="status" value="<%=status%>">
+</center>
+<script>
+  var androidNice = {
+    isPass: true,
+    username: window.document.getElementById('username').value,
+    mobileno: window.document.getElementById('mobileno').value,
+    gender: window.document.getElementById('gender').value,
+    birthdate: window.document.getElementById('birthdate').value,
+    dupinfo: window.document.getElementById('dupinfo').value,
+    sConnInfo: window.document.getElementById('sConnInfo').value,
+    authtype: window.document.getElementById('authtype').value,
+    nationalinfo: window.document.getElementById('nationalinfo').value,
+    accountId: window.document.getElementById('accountId').value,
+    message: window.document.getElementById('message').value,
+    status: window.document.getElementById('status').value,
+  }
+  console.log("androidNice", androidNice)
+
+  // Webview 사용 시,
+  // FlutterHandler.postMessage(JSON.stringify(androidNice));
+
+  // In case Flutter inappwebview
+  window.addEventListener("flutterInAppWebViewPlatformReady", function(event) {
+    if (window.flutter_inappwebview.callHandler) {
+      window.flutter_inappwebview.callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }else{
+      window.flutter_inappwebview._callHandler('FlutterHandler', JSON.stringify(androidNice));
+    }
+  });
+</script>
+</body>
+</html>

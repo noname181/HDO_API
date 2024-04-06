@@ -1,0 +1,20 @@
+<html>
+<head>
+    <title>임시 QR코드 URL</title>
+</head>
+<body>
+<center>
+    <p><p><p><p>
+    HDO EVNU
+    <br>
+        <p>충전기 인덱스 : <%=data.chg_id%></p>
+        <p>충전기 Alias(맥어드레스) : <%=data.chg_alias%></p>
+        <p>충전기 고유아이디 : <%=data.chg_charger_id%></p>
+    <input type="hidden" name="chgData" id="chgData" value="<%=data%>">
+</center>
+<script>
+    console.log("data222", window.document.getElementById("chgData").value)
+
+</script>
+</body>
+</html>

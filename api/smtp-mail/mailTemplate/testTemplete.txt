@@ -1,0 +1,7 @@
+Subject: 테스트 이메일입니다.
+    From: no-reply@bp.hd.com
+    To: ${sendEmailAdd}
+    Content-Type: text/html; charset=UTF-8
+    
+테스트 메일입니다. 
+갔으면 좋겠다

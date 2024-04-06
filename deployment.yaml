@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hdoev-api-total-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hdoev-api-total
+  template:
+    metadata:
+      labels:
+        app: hdoev-api-total
+    spec:
+      containers:
+        - name: hdoev-api-total
+          image: AWS_ECR_URI
+#          resources:
+#            requests:
+#              cpu: 0.5
+#              memory: 512Mi
+#            limits:
+#              cpu: 0.5
+#              memory: 512Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATE
+              value: 'DATE_STRING'
+            - name: TZ
+              value: "Asia/Seoul"
